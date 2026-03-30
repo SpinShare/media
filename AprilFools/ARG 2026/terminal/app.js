@@ -12,7 +12,7 @@ consoleInput.addEventListener('keyup', (e) => {
   evaluate(consoleInput.value);
 });
 
-function print(message) {
+function print(message, typewriter = false) {
   const printBox = document.createElement("div");
 
   const defaultColor = "inherit";
@@ -27,19 +27,43 @@ function print(message) {
 
   let text = escapeHTML(message);
 
-  // Replace color codes
-  text = text
-    .replace(/§o/g, () => {
-      currentColor = defaultColor;
-      return `</span><span style="color:${currentColor}">`;
-    })
-    .replace(/\§([0-9A-Fa-f]{3})/g, (_, hex) => {
-      currentColor = `#${hex}`;
-      return `</span><span style="color:${currentColor}">`;
-    });
+    // Wrap every a-z, A-Z and 0-9 in a <span> tag with opacity 0 if typewriter = true
+    if (typewriter) {
+    text = text.replace(
+        /§o|§[0-9A-Fa-f]{3}|&(?:[a-zA-Z]+|#\d+);|[a-zA-Z0-9\-_!?.,:'()/=]/g,
+        (match) => {
+            if (match === "§o" || /^§[0-9A-Fa-f]{3}$/.test(match) || match.startsWith("&")) {
+                    return match;
+                }
 
-  // Wrap whole message in span to allow resets
-  printBox.innerHTML = `<span style="color:${defaultColor}">${text}</span>`;
+                return `<span class="typewriter-char" style="opacity:0">${match}</span>`;
+            }
+        );
+    }
+
+    // Replace color codes
+    text = text
+        .replace(/§o/g, () => {
+          currentColor = defaultColor;
+          return `</span><span style="color:${currentColor}">`;
+        })
+        .replace(/§([0-9A-Fa-f]{3})/g, (_, hex) => {
+          currentColor = `#${hex}`;
+          return `</span><span style="color:${currentColor}">`;
+        });
+
+    // Wrap whole message in span to allow resets
+    printBox.innerHTML = `<span style="color:${defaultColor}">${text}</span>`;
+
+    // Animate the opacity of every span sequential to 1 (kinda like a typewriter effect). if typewriter = true
+    if (typewriter) {
+        const chars = printBox.querySelectorAll(".typewriter-char");
+        chars.forEach((char, index) => {
+            setTimeout(() => {
+                char.style.opacity = "1";
+            }, index * 25);
+        });
+    }
 
   consoleOutput.appendChild(printBox);
 }
@@ -63,7 +87,7 @@ async function evaluate() {
         body: `input=${encodeURIComponent(consoleInput.value)}`
     });
     const response = await request.text();
-    response.split("\n").forEach(line =>  print(line));
+    response.split("\n").forEach(line =>  print(line, true));
     
     consoleOutput.scrollTo(0, consoleOutput.scrollHeight);
     consoleInput.value = "";
